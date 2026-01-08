@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Daily Attendance System with Summary & Pie Chart PDF</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg,#4338ca,#7c3aed);
+  }
+  .container {
+    max-width: 1500px;
+    margin: auto;
+    padding: 15px;
+  }
+  .card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.3);
+  }
+  .company-title {
+    text-align: center;
+    font-size: 30px;
+    font-weight: 900;
+    color: #1e3a8a;
+  }
+  .att-date {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+  input, select, button {
+    padding: 7px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-weight: 700;
+  }
+  button {
+    background: #4338ca;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 2px solid #000;
+    padding: 4px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 11px;
+  }
+  th {
+    background: #4338ca;
+    color: #fff;
+  }
+  .action {
+    font-size: 11px;
+    padding: 3px 5px;
+  }
+  .edit {
+    background: #fde047;
+    color: #000;
+  }
+  .del {
+    background: #dc2626;
+    color: #fff;
+  }
+  .no-print {}
+
+  /* ===== STATUS COLOR BOX ===== */
+  .status-box {
+    display: inline-block;
+    min-width: 18px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-weight: 900;
+    color: #fff;
+  }
+  .status-P {
+    background: #16a34a;
+  }
+  .status-A {
+    background: #dc2626;
+  }
+  .status-R {
+    background: #2563eb;
+  }
+  .status-H {
+    background: #facc15;
+    color: #000;
+  }
+  .status-PR {
+    background: #059669; /* green shade */
+  }
+  .status-PH {
+    background: #ca8a04; /* yellow-orange */
+    color: #000;
+  }
+
+  /* ===== PDF ===== */
+  #pdfArea {
+    background: #fff;
+    padding: 10px;
+    display: none;
+    page-break-inside: avoid;
+  }
+  #pdfArea table {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+  }
+  #pdfArea tr {
+    page-break-inside: avoid;
+  }
+  /* PDF WIDTH */
+  .pdf-sn {
+    width: 15px;
+  }
+  .pdf-name {
+    width: 100px;
+  }
+  .pdf-des {
+    width: 80px;
+  }
+  .pdf-ref {
+    width: 25px;
+  }
+  .pdf-time {
+    width: 30px;
+  }
+  .pdf-total {
+    width: 35px;
+  }
+  .pdf-status {
+    width: 20px;
+  }
+  /* Summary table in PDF */
+  #pdfSummary {
+    margin-top: 20px;
+    border: 2px solid #000;
+    page-break-inside: avoid;
+  }
+  #pdfSummary th, #pdfSummary td {
+    border: 2px solid #000;
+    padding: 6px;
+    font-weight: 900;
+    font-size: 13px;
+  }
+  #pdfSummary th {
+    background: #4338ca;
+    color: #fff;
+  }
+  /* Pie chart container */
+  #pdfPieChartContainer {
+    width: 250px;
+    margin: 20px auto 0 auto;
+    page-break-inside: avoid;
+  }
+
+  /* Quick Status Buttons */
+  .status-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .status-buttons button {
+    flex: 1;
+    font-weight: 900;
+    font-size: 18px;
+  }
+#loginBox{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
+  background: #f1f5ff;   /* ya #ffffff */
+  z-index: 9999;
+
+  padding: 20px;
+}
+/* ===== SMALL TOP RIGHT BUTTONS (LOGOUT / BACKUP) ===== */
+.auth-actions{
+  float: right;
+  display: flex;
+  flex-direction: column;   /* Logout ke niche Backup */
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.auth-actions button{
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+}
+.three-dot-btn{
+  background:#1f2937;
+  color:#fff;
+  font-size:18px;
+  padding:4px 10px;
+  border-radius:6px;
+}
+
+.menu-box{
+  display:none;
+  position:absolute;
+  right:0;
+  margin-top:4px;
+  background:#fff;
+  border-radius:6px;
+  box-shadow:0 5px 15px rgba(0,0,0,.3);
+  overflow:hidden;
+}
+
+.menu-box button{
+  width:100%;
+  border:none;
+  background:#fff;
+  color:#000;
+  padding:6px 12px;
+  text-align:left;
+}
+
+.menu-box button:hover{
+  background:#e5e7eb;
+}
+</style>
+</head>
+
+<body>
+<!-- LOGIN BOX (NEW - SAFE) -->
+<div id="loginBox" style="padding:20px; background:#f1f5ff;">
+  <h3>LOGIN</h3>
+  <input id="loginUser" placeholder="User ID"><br><br>
+  <input id="loginPass" type="password" placeholder="Password"><br><br>
+  <button type="button" onclick="doLogin()">Login</button>
+</div>
+<div class="container">
+  <div class="card">
+<div id="app" style="display:none;">
+  <!-- TOP RIGHT MENU -->
+<div class="auth-actions no-print">
+
+  <!-- 3 DOT BUTTON -->
+  <button onclick="toggleMenu()" style="background:#334155;font-size:18px;">
+    ⋮
+  </button>
+
+  <!-- HIDDEN MENU -->
+  <div id="menuBox" class="menu-box" style="display:none;">
+    <button onclick="manualBackup(); toggleMenu()">Backup</button>
+    <button onclick="doLogout(); toggleMenu()">Logout</button>
+  </div>
+
+</div>
+
+    <div class="company-title" id="companyTitle">COMPANY NAME</div>
+    <div class="att-date" id="dateTitle">DATE</div>
+
+    <div class="grid no-print">
+      <input id="companyInput" placeholder="Company Name" />
+      <input type="date" id="dateInput" />
+      <button onclick="saveHeader()">Save</button>
+
+      <select id="pdfOrientation">
+        <option value="portrait">Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+    </div>
+
+    <hr class="no-print" />
+
+    <h3 class="no-print">EMPLOYEE MASTER</h3>
+    <div class="grid no-print">
+      <input id="mName" placeholder="Name" />
+      <input id="mDes" placeholder="Designation" />
+      <input id="mRef" placeholder="Reference" />
+      <button onclick="addMaster()">Add</button>
+      <button onclick="updateMaster()" id="updateMasterBtn" style="display:none; background:#059669;">Update</button>
+      <button onclick="cancelMasterEdit()" id="cancelMasterBtn" style="display:none; background:#dc2626;">Cancel</button>
+    </div>
+
+    <!-- Employee Master List -->
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Designation</th>
+          <th>Reference</th>
+          <th class="no-print">Edit</th>
+          <th class="no-print">Delete</th>
+        </tr>
+      </thead>
+      <tbody id="masterList"></tbody>
+    </table>
+
+    <hr class="no-print" />
+
+    <h3 class="no-print">DAILY ATTENDANCE</h3>
+
+    <!-- Quick status select buttons -->
+    <div class="status-buttons no-print">
+      <button style="background:#16a34a;" onclick="setStatusQuick('P')">P</button>
+      <button style="background:#dc2626;" onclick="setStatusQuick('A')">A</button>
+      <button style="background:#2563eb;" onclick="setStatusQuick('R')">R</button>
+      <button style="background:#facc15; color:#000;" onclick="setStatusQuick('H')">H</button>
+      <button style="background:#059669;" onclick="setStatusQuick('PR')">PR</button>
+      <button style="background:#ca8a04; color:#000;" onclick="setStatusQuick('PH')">PH</button>
+    </div>
+
+    <div class="grid no-print">
+      <select id="emp"></select>
+      <input type="time" id="in1" />
+      <input type="time" id="out1" />
+      <input type="time" id="in2" />
+      <input type="time" id="out2" />
+
+      <select id="status">
+        <option value="P">P</option>
+        <option value="A">A</option>
+        <option value="R">R</option>
+        <option value="H">H</option>
+        <option value="PR">PR</option>
+        <option value="PH">PH</option>
+      </select>
+
+      <button onclick="addAttendance()">Add / Update</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>SN</th>
+          <th>Name</th>
+          <th>Desig</th>
+          <th>Ref</th>
+          <th>In1</th>
+          <th>Out1</th>
+          <th>In2</th>
+          <th>Out2</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th class="no-print">Edit</th>
+          <th class="no-print">Del</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <br />
+    <button class="no-print" onclick="downloadPDF()">Download PDF</button>
+
+<!-- ================= MONTHLY SUMMARY ================= -->
+<div class="card no-print" style="margin-top:20px;">
+  <h3 style="text-align:center;">MONTHLY SUMMARY</h3>
+
+  <div class="grid">
+    <select id="msEmp"></select>
+    <input type="month" id="msMonth">
+    <button onclick="renderMonthlySummary()">Show Summary</button>
+    <button onclick="downloadMonthlyPDF()">Download Monthly PDF</button>
+  </div>
+
+  <div id="msHeader" style="font-weight:900; text-align:center; margin:10px 0;"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Count</th>
+      </tr>
+    </thead>
+    <tbody id="msBody"></tbody>
+  </table>
+</div>
+
+<!-- Monthly PDF Area -->
+<div id="monthlyPdfArea" style="display:none; background:#fff; padding:10px;">
+  <h2 id="mpCompany" style="text-align:center;"></h2>
+  <h3 id="mpEmp" style="text-align:center;"></h3>
+  <h4 id="mpMonth" style="text-align:center;"></h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Count</th>
+      </tr>
+    </thead>
+    <tbody id="mpBody"></tbody>
+  </table>
+</div>
+<!-- PDF Area -->
+<div id="pdfArea">
+  <div class="company-title" id="pdfCompany"></div>
+  <div class="att-date" id="pdfDate"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="pdf-sn">SN</th>
+        <th class="pdf-name">Name</th>
+        <th class="pdf-des">Desig</th>
+        <th class="pdf-ref">Ref</th>
+        <th class="pdf-time">In1</th>
+        <th class="pdf-time">Out1</th>
+        <th class="pdf-time">In2</th>
+        <th class="pdf-time">Out2</th>
+        <th class="pdf-total">Total</th>
+        <th class="pdf-status">St</th>
+      </tr>
+    </thead>
+    <tbody id="pdfBody"></tbody>
+  </table>
+
+  <!-- Summary Table -->
+  <table id="pdfSummary"></table>
+
+  <!-- Pie Chart container -->
+  <div id="pdfPieChartContainer">
+    <canvas id="pdfPieChart" width="250" height="250"></canvas>
+  </div>
+</div>
+
+<script>
+  let menuTimer;
+  let masters = JSON.parse(localStorage.getItem("masters")) || [];
+  let attendance = [];
+  let editIndex = -1;
+  let masterEditIndex = -1;
+
+  const emp = document.getElementById("emp"),
+    in1 = document.getElementById("in1"),
+    out1 = document.getElementById("out1"),
+    in2 = document.getElementById("in2"),
+    out2 = document.getElementById("out2"),
+    status = document.getElementById("status"),
+    tbody = document.getElementById("tbody"),
+    pdfBody = document.getElementById("pdfBody"),
+    masterList = document.getElementById("masterList"),
+    companyInput = document.getElementById("companyInput"),
+    dateInput = document.getElementById("dateInput"),
+    companyTitle = document.getElementById("companyTitle"),
+    dateTitle = document.getElementById("dateTitle"),
+    pdfCompany = document.getElementById("pdfCompany"),
+    pdfDate = document.getElementById("pdfDate"),
+    pdfSummary = document.getElementById("pdfSummary"),
+    pdfPieChartCanvas = document.getElementById("pdfPieChart"),
+    updateMasterBtn = document.getElementById("updateMasterBtn"),
+    cancelMasterBtn = document.getElementById("cancelMasterBtn"),
+    mName = document.getElementById("mName"),
+    mDes = document.getElementById("mDes"),
+    mRef = document.getElementById("mRef");
+
+  let pieChart = null;
+
+  function saveHeader() {
+    localStorage.setItem("company", companyInput.value);
+    loadAll();
+  }
+
+  function addMaster() {
+    if (!mName.value.trim()) return alert("Name required");
+    masters.push({ n: mName.value, d: mDes.value, r: mRef.value });
+    localStorage.setItem("masters", JSON.stringify(masters));
+    mName.value = mDes.value = mRef.value = "";
+    loadMasters();
+    loadAll();
+  }
+
+  function editMaster(i) {
+    const m = masters[i];
+    mName.value = m.n;
+    mDes.value = m.d;
+    mRef.value = m.r;
+    masterEditIndex = i;
+    updateMasterBtn.style.display = "inline-block";
+    cancelMasterBtn.style.display = "inline-block";
+  }
+
+  function updateMaster() {
+    if (masterEditIndex === -1) return;
+    if (!mName.value.trim()) return alert("Name required");
+    masters[masterEditIndex] = { n: mName.value, d: mDes.value, r: mRef.value };
+    localStorage.setItem("masters", JSON.stringify(masters));
+    masterEditIndex = -1;
+    mName.value = mDes.value = mRef.value = "";
+    updateMasterBtn.style.display = "none";
+    cancelMasterBtn.style.display = "none";
+    loadMasters();
+    loadAll();
+  }
+
+  function cancelMasterEdit() {
+    masterEditIndex = -1;
+    mName.value = mDes.value = mRef.value = "";
+    updateMasterBtn.style.display = "none";
+    cancelMasterBtn.style.display = "none";
+  }
+
+  function deleteMaster(index) {
+    // Remove employee attendance too
+    const empName = masters[index].n;
+    masters.splice(index, 1);
+    localStorage.setItem("masters", JSON.stringify(masters));
+
+    // Remove attendance of deleted employee from all dates
+    // (optional: for now remove from current date only)
+    attendance = attendance.filter((a) => a.n !== empName);
+    localStorage.setItem("att_" + dateInput.value, JSON.stringify(attendance));
+    loadMasters();
+    loadMasterList();
+    render();
+  }
+
+  function loadMasters() {
+    emp.innerHTML = "";
+    masters.forEach((m, i) => {
+      emp.innerHTML += `<option value="${i}">${m.n}</option>`;
+    });
+    loadMasterList();
+  }
+
+  function loadMasterList() {
+    masterList.innerHTML = "";
+    masters.forEach((m, i) => {
+      masterList.innerHTML += `
+      <tr>
+        <td>${m.n}</td>
+        <td>${m.d}</td>
+        <td>${m.r}</td>
+        <td class="no-print"><button class="edit action" onclick="editMaster(${i})">Edit</button></td>
+        <td class="no-print"><button class="del action" onclick="deleteMaster(${i})">Delete</button></td>
+      </tr>`;
+    });
+  }
+
+  function toMin(t) {
+    if (!t) return null;
+    let [a, b] = t.split(":").map(Number);
+    return a * 60 + b;
+  }
+  function diff(a, b) {
+    if (a == null || b == null) return 0;
+    return b >= a ? b - a : 1440 - a + b;
+  }
+  function f12(t) {
+    if (!t) return "";
+    let [h, m] = t.split(":").map(Number);
+    let ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + String(m).padStart(2, "0") + " " + ap;
+  }
+
+  function addAttendance() {
+    let e = masters[emp.value] || {};
+    let any = in1.value || out1.value || in2.value || out2.value;
+    let st = any ? "P" : status.value;
+
+    // Accept new statuses too (PR, PH)
+    if (!any) st = status.value;
+
+    let tot = any
+      ? diff(toMin(in1.value), toMin(out1.value)) + diff(toMin(in2.value), toMin(out2.value))
+      : 0;
+    let h = Math.floor(tot / 60),
+      m = tot % 60;
+
+    let obj = {
+      n: e.n,
+      d: e.d,
+      r: e.r,
+      i1: f12(in1.value),
+      o1: f12(out1.value),
+      i2: f12(in2.value),
+      o2: f12(out2.value),
+      t: tot ? `${h}h ${m}m` : "",
+      s: st,
+    };
+// ===== HYBRID DUPLICATE HANDLING =====
+// ===== EMPLOYEE + DATE STRICT LOCK =====
+const todayKey = "att_" + dateInput.value;
+
+const already = attendance.find(a =>
+  a.n === obj.n && todayKey === ("att_" + dateInput.value)
+);
+
+if (already && editIndex === -1) {
+  alert("Is employee ki attendance is date par pehle se saved hai");
+  return;
+}
+
+if (existingIndex !== -1 && editIndex === -1) {
+  // First duplicate → warning + auto edit
+  alert("Is employee ki attendance aaj pehle se hai.\nPurani entry update ho rahi hai.");
+  editIndex = existingIndex;
+}
+    editIndex > -1 ? (attendance[editIndex] = obj) : attendance.push(obj);
+    editIndex = -1;
+    localStorage.setItem("att_" + dateInput.value, JSON.stringify(attendance));
+    render();
+    clearInputs();
+  }
+
+  function clearInputs() {
+    in1.value = out1.value = in2.value = out2.value = "";
+    status.value = "P";
+  }
+
+  function render() {
+    tbody.innerHTML = "";
+    attendance.forEach((x, i) => {
+      tbody.innerHTML += `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${x.n}</td>
+        <td>${x.d}</td>
+        <td>${x.r}</td>
+        <td>${x.i1}</td>
+        <td>${x.o1}</td>
+        <td>${x.i2}</td>
+        <td>${x.o2}</td>
+        <td>${x.t}</td>
+<td><span class="status-box status-${x.s}">${x.s}</span></td>
+        <td class="no-print"><button class="edit action" onclick="editRow(${i})">Edit</button></td>
+        <td class="no-print"><button class="del action" onclick="delRow(${i})">Del</button></td>
+      </tr>
+    `;
+    });
+  }
+
+  function editRow(i) {
+    let x = attendance[i];
+    emp.value = masters.findIndex((m) => m.n === x.n);
+    in1.value = to24h(x.i1);
+    out1.value = to24h(x.o1);
+    in2.value = to24h(x.i2);
+    out2.value = to24h(x.o2);
+    status.value = x.s;
+    editIndex = i;
+  }
+
+  function to24h(t12) {
+    if (!t12) return "";
+    let [time, meridian] = t12.split(" ");
+    let [h, m] = time.split(":").map(Number);
+    if (meridian === "PM" && h !== 12) h += 12;
+    if (meridian === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+
+  function delRow(i) {
+  const ok = confirm("Kya aap is attendance ko delete karna chahte hain?");
+  if (!ok) return;
+
+  attendance.splice(i, 1);
+  localStorage.setItem("att_" + dateInput.value, JSON.stringify(attendance));
+  render();
+}
+
+  function loadAll() {
+    companyTitle.innerText = localStorage.getItem("company") || "COMPANY";
+    dateTitle.innerText = "DATE : " + dateInput.value;
+    pdfCompany.innerText = companyTitle.innerText;
+    pdfDate.innerText = dateTitle.innerText;
+
+    attendance = JSON.parse(localStorage.getItem("att_" + dateInput.value)) || [];
+    loadMasters();
+    loadMonthlyEmp();
+    render();
+  }
+
+  dateInput.value = localStorage.getItem("date") || new Date().toISOString().split("T")[0];
+  loadAll();
+
+  // Quick status set buttons
+  function setStatusQuick(st) {
+    status.value = st;
+  }
+
+  // Helper to generate summary (designation-wise with new statuses PR and PH)
+  function getSummary() {
+    const summary = {};
+    attendance.forEach(({ d, s }) => {
+      if (!d) return;
+      if (!summary[d]) summary[d] = { P: 0, A: 0, R: 0, H: 0, PR: 0, PH: 0, total: 0 };
+      if (summary[d][s] === undefined) summary[d][s] = 0;
+      summary[d][s] = (summary[d][s] || 0) + 1;
+      summary[d].total++;
+    });
+    return summary;
+  }
+
+  // Render Summary Table for PDF & update Pie Chart
+  function renderPDFSummaryAndChart() {
+    const summary = getSummary();
+
+    // Build summary table HTML with totals
+    let html = `
+      <thead>
+        <tr>
+          <th>Designation</th>
+          <th>Present (P)</th>
+          <th>Absent (A)</th>
+          <th>Rest (R)</th>
+          <th>Holiday (H)</th>
+          <th>Paid Rest (PR)</th>
+          <th>Paid Holiday (PH)</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+    `;
+
+    let totalP = 0, totalA = 0, totalR = 0, totalH = 0, totalPR = 0, totalPH = 0, grandTotal = 0;
+    for (const desig in summary) {
+      const s = summary[desig];
+      html += `<tr>
+          <td>${desig}</td>
+          <td>${s.P || 0}</td>
+          <td>${s.A || 0}</td>
+          <td>${s.R || 0}</td>
+          <td>${s.H || 0}</td>
+          <td>${s.PR || 0}</td>
+          <td>${s.PH || 0}</td>
+          <td>${s.total || 0}</td>
+        </tr>`;
+      totalP += s.P || 0;
+      totalA += s.A || 0;
+      totalR += s.R || 0;
+      totalH += s.H || 0;
+      totalPR += s.PR || 0;
+      totalPH += s.PH || 0;
+      grandTotal += s.total || 0;
+    }
+    // Add totals row
+    html += `<tr style="font-weight:bold; background:#eee;">
+        <td>Total</td>
+        <td>${totalP}</td>
+        <td>${totalA}</td>
+        <td>${totalR}</td>
+        <td>${totalH}</td>
+        <td>${totalPR}</td>
+        <td>${totalPH}</td>
+        <td>${grandTotal}</td
+        </tr>
+      </tbody>
+    `;
+
+    pdfSummary.innerHTML = html;
+
+    // Prepare Pie Chart data (Present, Absent, Rest, Holiday, Paid Rest, Paid Holiday)
+    const pieData = {
+      labels: ["Present", "Absent", "Rest", "Holiday", "Paid Rest", "Paid Holiday"],
+      datasets: [{
+        data: [totalP, totalA, totalR, totalH, totalPR, totalPH],
+        backgroundColor: ["#16a34a", "#dc2626", "#2563eb", "#facc15", "#059669", "#ca8a04"],
+        hoverOffset: 20
+      }]
+    };
+
+    // Destroy old chart if exists
+    if (pieChart) pieChart.destroy();
+
+    // Create new pie chart
+    pieChart = new Chart(pdfPieChartCanvas, {
+      type: "pie",
+      data: pieData,
+      options: {
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: { enabled: true }
+        }
+      }
+    });
+  }
+
+  async function downloadPDF() {
+    // Update PDF tables content before generating PDF
+    pdfBody.innerHTML = "";
+    attendance.forEach((x, i) => {
+      pdfBody.innerHTML += `
+      <tr>
+        <td class="pdf-sn">${i + 1}</td>
+        <td class="pdf-name">${x.n}</td>
+        <td class="pdf-des">${x.d}</td>
+        <td class="pdf-ref">${x.r}</td>
+        <td class="pdf-time">${x.i1}</td>
+        <td class="pdf-time">${x.o1}</td>
+        <td class="pdf-time">${x.i2}</td>
+        <td class="pdf-time">${x.o2}</td>
+        <td class="pdf-total">${x.t}</td>
+        <td class="pdf-status"><span class="status-box status-${x.s}">${x.s}</span></td>
+      </tr>`;
+    });
+
+    renderPDFSummaryAndChart();
+
+    // Make pdfArea visible for capturing
+    const pdfArea = document.getElementById("pdfArea");
+    pdfArea.style.display = "block";
+
+    // Wait a tick to let chart render fully
+    await new Promise(r => setTimeout(r, 500));
+
+    // Convert pie chart canvas to dataURL and insert as image replacing canvas
+    const pieChartImage = pdfPieChartCanvas.toDataURL("image/png");
+    const pieChartContainer = document.getElementById("pdfPieChartContainer");
+    pieChartContainer.innerHTML = `<img src="${pieChartImage}" style="width:250px;height:250px;display:block;margin:auto;" />`;
+
+    // Generate PDF
+    const orient = document.getElementById("pdfOrientation").value;
+    await html2pdf()
+      .set({
+        margin: 5,
+        filename: "Attendance_" + dateInput.value + ".pdf",
+        jsPDF: { unit: "mm", format: "a4", orientation: orient },
+        html2canvas: { scale: 2, scrollY: 0 }
+      })
+      .from(pdfArea)
+      .save();
+
+    // Restore the canvas for next time
+    pieChartContainer.innerHTML = `<canvas id="pdfPieChart" width="250" height="250"></canvas>`;
+    pieChart = new Chart(document.getElementById("pdfPieChart"), pieChart.data, pieChart.options);
+
+    pdfArea.style.display = "none";
+  }
+
+  // Save date on change and reload data
+  dateInput.addEventListener("change", () => {
+    localStorage.setItem("date", dateInput.value);
+    attendance = JSON.parse(localStorage.getItem("att_" + dateInput.value)) || [];
+    render();
+    loadAll();
+  });
+// ================= MONTHLY SUMMARY (FINAL – NO DUPLICATE) =================
+
+// Monthly Summary ke liye employee dropdown bharna
+function loadMonthlyEmp() {
+  const msEmp = document.getElementById("msEmp");
+  msEmp.innerHTML = "";
+  masters.forEach(m => {
+    msEmp.innerHTML += `<option value="${m.n}">${m.n}</option>`;
+  });
+}
+loadMonthlyEmp(); // Page load pe call karen
+
+// Monthly summary render karne wala function
+function renderMonthlySummary() {
+  const empName = document.getElementById("msEmp").value;
+  const month = document.getElementById("msMonth").value;
+  if (!month) return alert("Kripya month select karein");
+
+  // Status counts initialize karo
+  const counts = { P: 0, A: 0, R: 0, H: 0, PR: 0, PH: 0 };
+
+  // localStorage me se selected month ke attendance data ko count karo
+  for (let key in localStorage) {
+    if (key.startsWith("att_") && key.includes(month)) {
+      const dayData = JSON.parse(localStorage.getItem(key)) || [];
+      dayData.forEach(a => {
+        if (a.n === empName) {
+          counts[a.s] = (counts[a.s] || 0) + 1;
+        }
+      });
+    }
+  }
+
+  // Header update karo
+  const msHeader = document.getElementById("msHeader");
+  const empDesig = masters.find(m => m.n === empName)?.d || "";
+  msHeader.innerText = `${empName} | ${empDesig} | ${month}`;
+
+  // Table me data set karo
+  const msBody = document.getElementById("msBody");
+  msBody.innerHTML = "";
+  for (const status in counts) {
+    msBody.innerHTML += `<tr><td>${status}</td><td>${counts[status]}</td></tr>`;
+  }
+}
+
+// Monthly summary ka PDF download karne wala function
+async function downloadMonthlyPDF() {
+  const empName = document.getElementById("msEmp").value;
+  const month = document.getElementById("msMonth").value;
+  if (!month) return alert("Kripya month select karein");
+
+  // PDF headers set karo
+  document.getElementById("mpCompany").innerText = localStorage.getItem("company") || "COMPANY";
+  document.getElementById("mpEmp").innerText = empName;
+  document.getElementById("mpMonth").innerText = "Month: " + month;
+
+  // Monthly summary table ka body copy karo PDF table me
+  document.getElementById("mpBody").innerHTML = document.getElementById("msBody").innerHTML;
+
+  // PDF area visible karo
+  const area = document.getElementById("monthlyPdfArea");
+  area.style.display = "block";
+
+  // UI update ke liye thoda wait karo
+  await new Promise(r => setTimeout(r, 700));
+
+  // PDF generate karo
+  await html2pdf().set({
+    margin: 10,
+    filename: `Monthly_Summary_${empName}_${month}.pdf`,
+    jsPDF: { unit: "mm", format: "a4" },
+    html2canvas: { scale: 2, scrollY: 0 }
+  }).from(area).save();
+
+  // PDF area wapas hide kar do
+  area.style.display = "none";
+}
+// ===== LOGIN USERS (SAFE) =====
+const users = [
+  { user: "admin", pass: "1234" },
+  { user: "staff", pass: "1111" }
+];
+
+function doLogin() {
+  const u = loginUser.value;
+  const p = loginPass.value;
+
+  const ok = users.find(x => x.user === u && x.pass === p);
+  if (!ok) {
+    alert("Wrong ID or Password");
+    return;
+  }
+
+  loginBox.style.display = "none";
+  document.getElementById("app").style.display = "block";
+autoBackup("login");
+}
+function doLogout() {
+autoBackup("logout");
+  document.getElementById("app").style.display = "none";
+  document.getElementById("loginBox").style.display = "block";
+
+  document.getElementById("loginUser").value = "";
+  document.getElementById("loginPass").value = "";
+}
+
+// ================= AUTO BACKUP SYSTEM =================
+
+// Collect all localStorage data safely
+function getFullBackupData() {
+  const data = {};
+  for (let key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+      data[key] = localStorage.getItem(key);
+    }
+  }
+  return {
+    app: "Attendance System",
+    date: new Date().toISOString(),
+    data
+  };
+}
+
+// Auto download JSON backup
+function autoBackup(trigger = "auto") {
+  const today = new Date().toISOString().slice(0, 10);
+  const last = localStorage.getItem("lastBackupDate");
+
+  // same day duplicate backup avoid
+  if (last === today && trigger === "auto") return;
+
+  const backupData = getFullBackupData();
+  const blob = new Blob(
+    [JSON.stringify(backupData, null, 2)],
+    { type: "application/json" }
+  );
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `Attendance_Backup_${today}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  localStorage.setItem("lastBackupDate", today);
+  console.log("✅ Auto Backup Done:", trigger);
+}
+function manualBackup() {
+  const backupData = getFullBackupData();
+  const blob = new Blob(
+    [JSON.stringify(backupData, null, 2)],
+    { type: "application/json" }
+  );
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `Attendance_Backup_Manual_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  alert("Backup safalta se create ho gaya hai!");
+  console.log("Manual backup ho gaya");
+}
+function toggleMenu(){
+  const box = document.getElementById("menuBox");
+
+  if(box.style.display === "block"){
+    box.style.display = "none";
+    clearTimeout(menuTimer);
+    return;
+  }
+
+  box.style.display = "block";
+
+  clearTimeout(menuTimer);
+  menuTimer = setTimeout(() => {
+    box.style.display = "none";
+  }, 2500); // 2.5 second me auto close
+}
+</script>
+</body>
+</html>
